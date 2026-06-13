@@ -61,9 +61,9 @@ video_model:
 action_model:
   visual_encoder: "OpenGVLab/InternViT-6B-448px-V2_5"
   num_tiles: 12                   # 4x3 tiles for 1600x1200 @ 448px
-  hidden_dim: 1024
-  num_layers: 8
-  num_heads: 16
+  hidden_dim: 512                 # 1024 for full training, 512 for testing
+  num_layers: 6                   # 12 for full training, 6 for testing
+  num_heads: 8                    # 16 for full training, 8 for testing
   action_dim: 5
   action_horizon: 16
   dropout: 0.1
