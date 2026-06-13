@@ -53,15 +53,43 @@ pip install -r requirements.txt
 # Run all tests
 python tests/run_all_tests.py
 
-# Run inference demo (CPU)
-python inference/predict.py
+# Launch data collection UI
+python scripts/collect_ui.py
+
+# Or collect data via command line
+python scripts/collect_data.py --mode virtual --num_episodes 10
 
 # Train action model
 python scripts/train_action.py --data_dir ./data/raw --output_dir ./outputs --simple_lang
 
 # Train video model
 python scripts/train_video.py --data_dir ./data/raw --output_dir ./outputs
+
+# Evaluate
+python scripts/evaluate.py --data_dir ./data/raw
+
+# Inference demo
+python inference/predict.py --demo
 ```
+
+### Data Collection UI
+
+The project includes a tkinter-based GUI for interactive data collection with:
+- **Live camera preview** with real-time frame display
+- **Stage control**: Manual XY movement with configurable step size
+- **Pipette control**: XY movement + Z-axis descent/ascent
+- **PID auto-positioning**: Click on camera view to set target, PID controller auto-moves stage
+- **Data recording**: Start/stop recording with task descriptions
+
+See [Data Collection Guide](docs/DATA_COLLECTION_GUIDE.md) for detailed instructions.
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md) — System architecture and module details
+- [API Reference](docs/API.md) — Complete API documentation
+- [Data Collection Guide](docs/DATA_COLLECTION_GUIDE.md) — 数据采集指南 (中文)
+- [Data Collection Guide (EN)](docs/DATA_COLLECTION_GUIDE_EN.md) — English version
+- [Development Log](docs/DEVELOPMENT.md) — Development progress and changelog
 
 ## Hardware Requirements
 - Training: 6-8× NVIDIA 5090 GPUs

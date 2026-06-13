@@ -64,8 +64,8 @@ class MicroDreamerPredictor:
             self.video_model.load_state_dict(torch.load(video_ckpt, map_location=self.device))
             self.video_model.eval()
 
-        # Language encoder
-        self.lang_encoder = SimpleLanguageEncoder(vocab_size=1000, hidden_dim=self.cfg.action_model.hidden_dim).to(self.device)
+        # Language encoder — hidden_dim must match video model context_dim
+        self.lang_encoder = SimpleLanguageEncoder(vocab_size=1000, hidden_dim=self.cfg.language.cross_attn_dim).to(self.device)
 
     @torch.no_grad()
     def predict(
@@ -109,9 +109,27 @@ class MicroDreamerPredictor:
 
 
 if __name__ == "__main__":
-    # Test with random input
-    predictor = MicroDreamerPredictor(device="cpu")
-    frame = np.random.randint(0, 255, (1200, 1600), dtype=np.uint8)
-    result = predictor.predict(frame, task_description="move to cell")
-    print(f"Actions: {result['actions'].shape}")
-    print(f"Frames: {result['predicted_frames'].shape}")
+    parser = argparse.ArgumentParser(description="MicroDreamer Inference")
+    parser.add_argument("--action_ckpt", type=str, default=None, help="Path to action model checkpoint")
+    parser.add_argument("--video_ckpt", type=str, default=None, help="Path to video model checkpoint")
+    parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
+    parser.add_argument("--device", type=str, default="cpu", help="Device (cpu/cuda/auto)")
+    parser.add_argument("--task", type=str, default="move to cell", help="Task description")
+    parser.add_argument("--demo", action="store_true", help="Run demo with random input")
+    args = parser.parse_args()
+
+    if args.demo or len(sys.argv) == 1:
+        # Demo mode: test with random input
+        predictor = MicroDreamerPredictor(device=args.device)
+        frame = np.random.randint(0, 255, (1200, 1600), dtype=np.uint8)
+        result = predictor.predict(frame, task_description=args.task)
+        print(f"Actions shape: {result['actions'].shape}")
+        print(f"Predicted frames shape: {result['predicted_frames'].shape}")
+    else:
+        predictor = MicroDreamerPredictor(
+            action_ckpt=args.action_ckpt,
+            video_ckpt=args.video_ckpt,
+            config_path=args.config,
+            device=args.device,
+        )
+        print(f"Predictor loaded on {predictor.device}. Use predictor.predict(frame, task) programmatically.")

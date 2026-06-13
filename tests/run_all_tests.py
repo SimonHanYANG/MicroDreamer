@@ -10,6 +10,8 @@ TESTS = [
     "tests/test_data/test_dataset.py",
     "tests/test_models/test_action_model.py",
     "tests/test_models/test_video_model.py",
+    "tests/test_inference/test_e2e.py",
+    "tests/test_scripts/test_collect_ui.py",
 ]
 
 def main():

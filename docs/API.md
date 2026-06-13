@@ -178,3 +178,62 @@ estimated_z = cal.estimate_z(image)
 ```python
 logger = setup_logger("my_module", level=logging.INFO, log_dir="logs")
 ```
+
+## Data Collection
+
+See [Data Collection Guide](DATA_COLLECTION_GUIDE.md) for detailed instructions on collecting data with the UI.
+
+### Data Format
+
+Each episode is saved as a directory containing:
+- `data.npz`: `frames` (N, H, W), `stage_positions` (N, 2), `pipette_positions` (N, 3)
+- `metadata.json`: episode_id, timestamp, task_description, num_frames, camera settings
+
+## Scripts
+
+### `scripts/collect_ui.py`
+Interactive data collection GUI with camera preview, stage/pipette control, and PID auto-positioning.
+
+```bash
+python scripts/collect_ui.py [--config CONFIG] [--output_dir OUTPUT_DIR]
+```
+
+**Key Classes:**
+- `PIDController`: PID controller with anti-windup for auto-positioning
+- `DataCollector`: Handles episode recording and saving as .npz + metadata.json
+- `CollectionUI`: Main tkinter GUI application
+
+### `scripts/collect_data.py`
+Command-line data collection with virtual or real hardware.
+
+```bash
+python scripts/collect_data.py --mode virtual --num_episodes 10
+```
+
+### `scripts/train_action.py`
+Action model training with TensorBoard, gradient clipping, cosine LR scheduler, and early stopping.
+
+```bash
+python scripts/train_action.py --data_dir DATA_DIR --simple_lang [--patience N]
+```
+
+### `scripts/train_video.py`
+Video model training with LoRA parameter groups and mixed precision.
+
+```bash
+python scripts/train_video.py --data_dir DATA_DIR [--patience N]
+```
+
+### `scripts/evaluate.py`
+Model evaluation with JSON output.
+
+```bash
+python scripts/evaluate.py --data_dir DATA_DIR [--action_ckpt PATH] [--video_ckpt PATH]
+```
+
+### `inference/predict.py`
+Unified inference for action and video prediction.
+
+```bash
+python inference/predict.py --demo [--device cpu|cuda] [--task "description"]
+```

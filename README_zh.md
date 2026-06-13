@@ -70,10 +70,10 @@ pip install -r requirements.txt
 # 运行全部测试
 python tests/run_all_tests.py
 
-# 运行推理演示（CPU）
-python inference/predict.py
+# 启动数据采集 UI（推荐）
+python scripts/collect_ui.py
 
-# 采集虚拟数据
+# 或通过命令行采集虚拟数据
 python scripts/collect_data.py --mode virtual --num_episodes 5 --output_dir ./data/raw
 
 # 训练动作预测模型
@@ -85,9 +85,38 @@ python scripts/train_video.py --data_dir ./data/raw --output_dir ./outputs
 # 评估模型
 python scripts/evaluate.py --data_dir ./data/raw --action_ckpt ./outputs/checkpoints/action_best.pt
 
+# 运行推理演示
+python inference/predict.py --demo
+
 # 运行标定
 python scripts/calibrate.py --mode all
 ```
+
+### 数据采集 UI
+
+项目包含基于 tkinter 的交互式数据采集 GUI：
+
+```bash
+python scripts/collect_ui.py
+```
+
+功能特性：
+- **实时相机预览**：实时显示显微镜画面
+- **Stage 控制**：手动 XY 移动，可配置步长
+- **Pipette 控制**：XY 移动 + Z 轴升降
+- **PID 自动定位**：点击画面设置目标位置，PID 控制器自动移动载物台
+- **数据录制**：开始/停止录制，输入任务描述
+- **Episode 管理**：浏览已采集的数据片段
+
+详细使用说明请参阅 [数据采集指南](docs/DATA_COLLECTION_GUIDE.md)。
+
+## 文档
+
+- [系统架构](docs/ARCHITECTURE.md) — 架构设计与模块说明
+- [API 参考](docs/API.md) — 完整 API 文档
+- [数据采集指南](docs/DATA_COLLECTION_GUIDE.md) — 详细的采集流程与标注规范
+- [Data Collection Guide (EN)](docs/DATA_COLLECTION_GUIDE_EN.md) — 英文版
+- [开发日志](docs/DEVELOPMENT.md) — 开发进度与更新记录
 
 ## 硬件要求
 
@@ -118,12 +147,6 @@ python scripts/calibrate.py --mode all
 每个 episode 包含：
 - `data.npz`：帧序列、载物台位置、移液器位置、时间戳
 - `metadata.json`：任务描述、子目标列表、帧数
-
-## API 文档
-
-- [架构设计](./docs/ARCHITECTURE.md)
-- [API 参考](./docs/API.md)
-- [开发日志](./docs/DEVELOPMENT.md)
 
 ## 许可证
 

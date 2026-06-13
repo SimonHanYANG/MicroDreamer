@@ -83,3 +83,55 @@ Complete training infrastructure with TensorBoard, evaluation metrics, calibrati
 - `dev` branch: active development
 - `main` branch: stable, tested
 - 8 commits in Phase 2
+
+---
+
+## Phase 3: Data Collection UI & Documentation (2026-06-13)
+
+### Summary
+Added interactive data collection GUI, PID auto-positioning, comprehensive data collection documentation, and bug fixes.
+
+### New Features
+
+#### Data Collection UI (`scripts/collect_ui.py`)
+- **tkinter-based GUI** for interactive microscope data collection
+- **Live camera preview** with real-time frame display (30fps)
+- **Stage control panel**: Manual XY movement with configurable step size
+- **Pipette control panel**: XY movement + Z-axis descent/ascent
+- **PID auto-positioning**: Click on camera view to set target, PID controller auto-moves stage
+  - Configurable Kp, Ki, Kd parameters
+  - Anti-windup integral clamping
+  - Output limiting for safety
+- **Data recording**: Start/stop recording with task descriptions
+- **Episode management**: Browse and review collected episodes
+- **Status bar**: Real-time FPS, position display, recording status
+
+#### Data Collection Documentation
+- **DATA_COLLECTION_GUIDE.md** (中文): 详细的数据采集指南
+  - 硬件环境配置
+  - 采集前准备流程
+  - 数据采集步骤详解
+  - 标注规范（语言标注模板）
+  - 数据格式说明
+  - 质量控制检查清单
+  - 常见问题与故障排除
+- **DATA_COLLECTION_GUIDE_EN.md** (English): Full English version
+
+#### Bug Fixes
+1. **Inference dimension mismatch**: SimpleLanguageEncoder hidden_dim now matches video model context_dim
+2. **Inference argparse**: Added proper --help support and demo mode
+3. **PID controller**: Proper anti-windup with integral clamping
+
+### Test Results
+- 7 test suites, 31 tests - ALL PASSED
+- New test suite: `test_scripts/test_collect_ui.py` (PID controller + DataCollector)
+
+### Updated Files
+- `inference/predict.py`: Fixed lang_encoder dimension, added argparse
+- `scripts/collect_ui.py`: New file - data collection GUI
+- `tests/test_scripts/test_collect_ui.py`: New file - UI component tests
+- `tests/run_all_tests.py`: Added new test suites
+- `README.md`: Added UI documentation and data collection guide links
+- `README_zh.md`: Added Chinese UI documentation and guide links
+- `docs/DATA_COLLECTION_GUIDE.md`: New file - Chinese data collection guide
+- `docs/DATA_COLLECTION_GUIDE_EN.md`: New file - English data collection guide
