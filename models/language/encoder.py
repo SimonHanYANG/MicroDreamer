@@ -93,8 +93,16 @@ class SimpleLanguageEncoder(nn.Module):
         self.layer_norm = nn.LayerNorm(hidden_dim)
         self.max_length = max_length
 
-    def forward(self, input_ids: torch.Tensor, **kwargs) -> torch.Tensor:
-        """Encode token ids to embeddings. input_ids: (B, L)"""
+    def forward(self, input_ids: torch.Tensor = None, text: list = None, **kwargs) -> torch.Tensor:
+        """Encode token ids to embeddings.
+
+        Args:
+            input_ids: (B, L) token ids
+            text: list of strings (alternative, auto-encoded)
+        """
+        if input_ids is None and text is not None:
+            input_ids = encode_text_simple(text, max_length=self.max_length)
+            input_ids = input_ids.to(self.embedding.weight.device)
         B, L = input_ids.shape
         positions = torch.arange(L, device=input_ids.device).unsqueeze(0)
         x = self.embedding(input_ids) + self.pos_encoding(positions)

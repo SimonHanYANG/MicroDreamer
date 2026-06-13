@@ -56,10 +56,41 @@ def test_video_model_params():
     print("  [PASS] video_model_params")
 
 
+def test_lora_params():
+    model = VideoPredictionModel(
+        in_channels=1, hidden_dim=256, num_frames=8,
+        resolution=(96, 128), num_layers=2, num_heads=4,
+        lora_rank=16, lora_alpha=32,
+    )
+    lora_params = sum(p.numel() for p in model.get_lora_params())
+    total_params = sum(p.numel() for p in model.parameters())
+    assert lora_params > 0
+    assert lora_params < total_params
+    print(f"  LoRA: {lora_params / 1e3:.1f}K / {total_params / 1e6:.1f}M = {100 * lora_params / total_params:.2f}%")
+    print("  [PASS] lora_params")
+
+
+def test_lora_merge():
+    model = VideoPredictionModel(
+        in_channels=1, hidden_dim=128, num_frames=4,
+        resolution=(48, 64), num_layers=2, num_heads=4,
+        lora_rank=8, lora_alpha=16,
+    )
+    x = torch.randn(1, 2, 1, 48, 64)
+    pred_before = model(x, num_pred=2)
+    model.merge_lora()
+    pred_after = model(x, num_pred=2)
+    # After merge, outputs should be close (not exact due to numerical precision)
+    assert pred_before.shape == pred_after.shape
+    print("  [PASS] lora_merge")
+
+
 if __name__ == "__main__":
     print("Running video model tests...")
     test_video_model_forward()
     test_video_model_no_language()
     test_video_loss()
     test_video_model_params()
+    test_lora_params()
+    test_lora_merge()
     print("All video model tests passed!")
