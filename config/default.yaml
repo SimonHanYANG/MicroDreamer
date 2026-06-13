@@ -1,0 +1,95 @@
+# MicroDreamer Default Configuration
+# ===================================
+
+project:
+  name: MicroDreamer
+  version: 0.1.0
+
+# Camera Configuration
+camera:
+  resolution: [1600, 1200]        # width, height
+  fps: 30
+  pixel_format: Mono8             # Mono8 or RGB8
+  pixel_size_um: 0.6              # micrometers per pixel
+
+# Stage Configuration (XY)
+stage:
+  type: virtual                   # virtual | nikon_ti2
+  dll_path: ""                    # path to StageCPP.dll for real hardware
+  speed: 100                      # default movement speed
+  range_x_um: [-50000, 50000]    # stage X range in micrometers
+  range_y_um: [-50000, 50000]    # stage Y range in micrometers
+
+# Pipette Configuration (XYZ 3-DOF)
+pipette:
+  type: virtual                   # virtual | http_api
+  api_url: "http://localhost:5000"
+  arm_id: 1                       # MMS arm ID
+  speed: 10
+  range_x_um: [-10000, 10000]
+  range_y_um: [-10000, 10000]
+  range_z_um: [0, 200]           # Z range (focus axis)
+
+# Data Collection
+collection:
+  output_dir: "./data/raw"
+  sync_tolerance_ms: 50           # timestamp alignment tolerance
+  camera_fps: 30
+  stage_hz: 100
+  pipette_hz: 100
+  buffer_size: 1000
+
+# Preprocessing
+preprocessing:
+  high_res: [1600, 1200]          # for action prediction
+  low_res: [512, 384]             # for video prediction
+  action_dim: 5                   # stage_dx, stage_dy, pip_dx, pip_dy, pip_dz
+  frame_skip: 1                   # skip frames for temporal subsampling
+  normalize_actions: true
+
+# Model - Video Prediction (CogVideoX + LoRA)
+video_model:
+  backbone: "THUDM/CogVideoX-5b"
+  lora_rank: 64
+  lora_alpha: 128
+  num_frames: 16
+  resolution: [512, 384]
+  guidance_scale: 6.0
+  num_inference_steps: 50
+
+# Model - Action Prediction
+action_model:
+  visual_encoder: "OpenGVLab/InternViT-6B-448px-V2_5"
+  num_tiles: 12                   # 4x3 tiles for 1600x1200 @ 448px
+  hidden_dim: 1024
+  num_layers: 8
+  num_heads: 16
+  action_dim: 5
+  action_horizon: 16
+  dropout: 0.1
+
+# Language Conditioning
+language:
+  model_name: "google/flan-t5-xl"
+  max_length: 128
+  cross_attn_dim: 1024
+
+# Training
+training:
+  batch_size: 2
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  max_epochs: 100
+  warmup_steps: 500
+  gradient_accumulation_steps: 4
+  fp16: true
+  deepspeed: true
+  num_gpus: 6
+  log_interval: 10
+  save_interval: 1000
+  eval_interval: 500
+
+# Calibration
+calibration:
+  pixel_to_um: 0.6                # default pixel-to-micrometer ratio
+  focus_planes: []                 # Z positions for focus calibration

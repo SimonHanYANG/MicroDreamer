@@ -1,0 +1,24 @@
+# MicroDreamer Dependencies
+# ========================
+
+# Core
+torch>=2.0.0
+numpy>=1.24.0
+scipy>=1.10.0
+pyyaml>=6.0
+
+# Data
+Pillow>=9.0.0
+
+# Models (optional, for full training)
+transformers>=4.30.0
+accelerate>=0.20.0
+deepspeed>=0.10.0
+
+# Hardware (optional, for real devices)
+# pypylon>=3.0.0       # Basler camera
+# requests>=2.28.0     # HTTP API for pipette
+
+# Development
+pytest>=7.0.0
+tensorboard>=2.13.0
