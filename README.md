@@ -98,5 +98,56 @@ See [Data Collection Guide](docs/DATA_COLLECTION_GUIDE.md) for detailed instruct
 - Inference: 1-2× GPUs
 - Testing: CPU-only (virtual devices)
 
+## E2E Test Commands
+
+```bash
+# 0. Environment
+conda activate microdreamer
+cd D:\SimonWorkspace\MicroRobotDataGen\MicroDreamer
+
+# 1. Generate mock data (with targets)
+python scripts/generate_test_data.py --output_dir ./data/test_raw --num_episodes 10 --frames 50 --resolution 200,160
+
+# 1.5 Visualize data (interactive GUI)
+python scripts/viz_mock_data.py
+
+# 2. Run all unit tests (~34 tests)
+python tests/run_all_tests.py
+
+# 3. Train action model (3 epochs, test config)
+python scripts/train_action.py --data_dir ./data/test_raw --output_dir ./outputs/test --simple_lang --config config/test.yaml --patience 3
+
+# 4. Train video model (3 epochs, test config)
+python scripts/train_video.py --data_dir ./data/test_raw --output_dir ./outputs/test --config config/test.yaml --patience 3
+
+# 5. Evaluate both models
+python scripts/evaluate.py --data_dir ./data/test_raw --output_dir ./outputs/test/eval --action_ckpt ./outputs/test/checkpoints/action_best.pt --video_ckpt ./outputs/test/checkpoints/video_best.pt --config config/test.yaml
+
+# 5.5 Visualize evaluation results
+python scripts/viz_mock_data.py --data_dir ./data/test_raw
+
+# 6. Inference
+python inference/predict.py --action_ckpt ./outputs/test/checkpoints/action_best.pt --video_ckpt ./outputs/test/checkpoints/video_best.pt --config config/test.yaml --device cpu --task "Aspirate the target cell"
+
+# 6.5 Visualize inference results
+python scripts/viz_mock_data.py --data_dir ./data/test_raw
+
+# 7. Clean up
+rmdir /s /q data\test_raw
+rmdir /s /q outputs\test
+```
+
+Quick demo (no checkpoint needed):
+```bash
+python inference/predict.py --demo --device cpu
+```
+
+Static visualization (generates PNGs):
+```bash
+python scripts/visualize_mock_data.py --output_dir ./data/viz_mock --save_dir ./outputs/viz
+```
+
+See [E2E Test Guide](docs/E2E_TEST_GUIDE.md) for full details.
+
 ## License
 TBD

@@ -5,11 +5,14 @@
 本手册提供完整的端到端测试流程，验证 MicroDreamer 系统的所有核心功能：
 
 1. **数据生成** — 生成模拟训练数据
-2. **数据加载** — 验证 Dataset 加载和预处理
-3. **动作模型训练** — 训练动作预测模型
-4. **视频模型训练** — 训练视频预测模型
-5. **模型评估** — 评估两个模型的指标
-6. **推理预测** — 使用训练好的模型进行推理
+2. **数据可视化** — 交互式检查生成的数据质量
+3. **数据加载** — 验证 Dataset 加载和预处理
+4. **动作模型训练** — 训练动作预测模型
+5. **视频模型训练** — 训练视频预测模型
+6. **模型评估** — 评估两个模型的指标
+7. **推理预测** — 使用训练好的模型进行推理
+
+> 可视化工具 `viz_mock_data.py` 可在数据生成后、训练前、评估后、推理后任意阶段使用，用于检查数据质量和模型输出。
 
 ---
 
@@ -58,6 +61,37 @@ python scripts/generate_test_data.py --output_dir ./data/test_raw --num_episodes
   python -c "import numpy as np; d=np.load('./data/test_raw/episode_20260614_000000_0000/data.npz'); print('frames:', d['frames'].shape, 'stage:', d['stage_positions'].shape, 'pipette:', d['pipette_positions'].shape)"
   ```
 - 预期输出：`frames: (50, 160, 200) stage: (50, 2) pipette: (50, 3)`
+
+---
+
+### 步骤 1.5：可视化检查生成的数据（推荐）
+
+使用交互式可视化工具检查生成的 mock 数据是否合理。
+
+**交互式 GUI（推荐）：**
+```cmd
+python scripts/viz_mock_data.py
+```
+
+**功能：**
+- 下拉切换 episode，逐帧播放显微镜画面
+- 查看 Stage XY 轨迹图（按子目标颜色编码）
+- 查看 Stage/Pipette 位置随时间变化
+- 查看 5-DOF action deltas
+- 查看子目标时间线、帧统计信息
+- 所有图表随帧滑块同步联动
+
+**检查要点：**
+- 帧中有可辨识的运动物体（白色圆圈）
+- Stage 轨迹为连续平滑路径
+- Pipette Z 轴有下降趋势（模拟吸液）
+- 子目标时间段划分合理
+
+**静态可视化（生成 PNG）：**
+```cmd
+python scripts/visualize_mock_data.py --output_dir ./data/viz_mock --save_dir ./outputs/viz
+```
+在 `./outputs/viz/` 中查看 `episode_XX_overview.png` 和 `episode_XX_montage.png`。
 
 ---
 
@@ -113,6 +147,10 @@ python scripts/train_action.py --data_dir ./data/test_raw --output_dir ./outputs
   dir outputs\test\checkpoints\
   ```
   应有 `action_best.pt` 和 `action_ckpt_epoch*.pt`
+
+---
+
+> **💡 可视化提示：** 训练前可再次打开 `python scripts/viz_mock_data.py` 确认训练数据的 action delta 分布合理。
 
 ---
 
@@ -180,6 +218,23 @@ type outputs\test\eval\eval_video.json
 
 ---
 
+### 步骤 5.5：可视化评估结果（推荐）
+
+评估完成后，可视化对比预测值与真值。
+
+**交互式检查：**
+```cmd
+python scripts/viz_mock_data.py --data_dir ./data/test_raw
+```
+逐帧查看原始数据，与 `outputs/test/eval/eval_action.json` 和 `eval_video.json` 中的指标对照。
+
+**检查要点：**
+- `action_mse` / `endpoint_error` 数值合理（不应为 NaN/Inf）
+- 视频指标 `psnr` > 20dB（测试配置下可能较低，属正常）
+- `temporal_consistency` 接近 1.0 表示时间连贯性好
+
+---
+
 ### 步骤 6：运行推理
 
 使用训练好的模型进行推理预测。
@@ -206,6 +261,26 @@ python inference/predict.py --demo --device cpu
 **验证结果：**
 - 应显示 `Actions shape: (16, 5)`
 - 应显示 `Predicted frames shape: (4, 1, 384, 512)`
+
+---
+
+### 步骤 6.5：可视化推理结果（推荐）
+
+推理完成后，用可视化工具对比输入帧与预测输出。
+
+**交互式检查推理输入：**
+```cmd
+python scripts/viz_mock_data.py --data_dir ./data/test_raw
+```
+选择任意 episode，逐帧播放观察模型输入数据：
+- 帧内容是否清晰
+- 位置轨迹是否平滑
+- Action delta 幅度是否合理
+
+**检查要点：**
+- 推理输出 `Actions shape: (16, 5)` — 5-DOF 动作序列
+- 预测帧 `shape: (4, 1, 384, 512)` — 未来 4 帧视频
+- 对比 `viz_mock_data.py` 中同 episode 的真值轨迹与推理输出
 
 ---
 
@@ -251,12 +326,15 @@ rm -rf ./data/test_raw ./outputs/test
 | 步骤 | 预期耗时 | 说明 |
 |------|---------|------|
 | 1. 生成数据 | ~5 秒 | 10 episodes, 200x160 分辨率 |
+| 1.5. 可视化检查 | 手动 | `viz_mock_data.py` 交互式查看，可选 |
 | 2. 单元测试 | ~60 秒 | 8 个测试套件, ~38 个测试 |
 | 3. 训练动作模型 | ~15 秒 | 3 epochs, GPU |
 | 4. 训练视频模型 | ~10 秒 | 3 epochs, GPU |
 | 5. 评估模型 | ~90 秒 | 动作+视频评估 |
+| 5.5. 可视化评估 | 手动 | 对照指标检查数据，可选 |
 | 6. 推理 | ~30 秒 | 含模型加载 |
-| **总计** | **~3-4 分钟** | 全部步骤 |
+| 6.5. 可视化推理 | 手动 | 对比预测与真值，可选 |
+| **总计** | **~3-4 分钟** | 自动步骤（不含可视化） |
 
 > 注：CPU 模式下训练和推理耗时约为 GPU 的 3-5 倍。
 
@@ -326,4 +404,6 @@ python scripts/train_video.py --help
 python scripts/evaluate.py --help
 python scripts/calibrate.py --help
 python inference/predict.py --help
+python scripts/viz_mock_data.py --help
+python scripts/visualize_mock_data.py --help
 ```

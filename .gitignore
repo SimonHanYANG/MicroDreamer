@@ -11,6 +11,8 @@ build/
 
 # Data
 data/raw/
+data/test_raw/
+data/viz_mock/
 outputs/
 logs/
 *.npz

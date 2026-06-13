@@ -79,58 +79,96 @@ def generate_episode(
     width: int = 200,
     fps: float = 30.0,
 ) -> str:
-    """Generate one synthetic episode with realistic patterns."""
+    """Generate one synthetic episode with realistic patterns and explicit targets."""
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     episode_id = f"episode_{timestamp}_{episode_idx:04d}"
     ep_dir = output_dir / episode_id
     ep_dir.mkdir(parents=True, exist_ok=True)
 
-    # Generate frames with moving circle + noise
+    np.random.seed(episode_idx * 1000)
+
+    # --- Target definition ---
+    # Target cell position in stage coordinates (µm)
+    target_stage_x = np.random.uniform(-30.0, 30.0)
+    target_stage_y = np.random.uniform(-30.0, 30.0)
+    # Target pipette end position (µm)
+    target_pip_x = np.random.uniform(-5.0, 5.0)
+    target_pip_y = np.random.uniform(-5.0, 5.0)
+    target_pip_z = np.random.uniform(50.0, 60.0)  # near the cell surface
+
+    # --- Generate frames with moving circle + noise ---
     frames = np.random.randint(10, 40, (num_frames, height, width), dtype=np.uint8)
 
-    # Multiple moving objects for realism
-    np.random.seed(episode_idx * 1000)
-    num_objects = np.random.randint(2, 5)
+    # Target cell: fixed bright circle at a known pixel location
+    # Place target near center with some offset
+    target_pixel_x = width // 2 + np.random.randint(-20, 20)
+    target_pixel_y = height // 2 + np.random.randint(-15, 15)
+    target_radius = np.random.randint(8, 14)
+    target_brightness = np.random.randint(180, 240)
+
+    # Background objects (moving)
+    num_objects = np.random.randint(2, 4)
     object_params = []
     for _ in range(num_objects):
         cx_start = np.random.randint(width // 4, 3 * width // 4)
         cy_start = np.random.randint(height // 4, 3 * height // 4)
-        radius = np.random.randint(5, 15)
-        speed_x = np.random.uniform(-2.0, 2.0)
-        speed_y = np.random.uniform(-1.5, 1.5)
-        brightness = np.random.randint(120, 220)
-        freq_x = np.random.uniform(0.05, 0.2)
-        freq_y = np.random.uniform(0.03, 0.15)
+        radius = np.random.randint(4, 10)
+        speed_x = np.random.uniform(-1.0, 1.0)
+        speed_y = np.random.uniform(-0.8, 0.8)
+        brightness = np.random.randint(80, 150)
+        freq_x = np.random.uniform(0.05, 0.15)
+        freq_y = np.random.uniform(0.03, 0.12)
         object_params.append((cx_start, cy_start, radius, speed_x, speed_y, brightness, freq_x, freq_y))
 
     yy, xx = np.ogrid[:height, :width]
+    target_dist_sq = (xx - target_pixel_x) ** 2 + (yy - target_pixel_y) ** 2
+    target_mask = target_dist_sq < target_radius ** 2
+    target_intensity = target_brightness * np.exp(-target_dist_sq / (2 * (target_radius * 0.7) ** 2))
+
     for t in range(num_frames):
+        # Draw target cell (static)
+        frames[t] = np.clip(
+            frames[t].astype(np.float32) + target_intensity * target_mask, 0, 255
+        ).astype(np.uint8)
+        # Draw background objects (moving)
         for cx_start, cy_start, radius, speed_x, speed_y, brightness, freq_x, freq_y in object_params:
-            cx = int(cx_start + speed_x * t + 10 * np.sin(freq_x * t))
-            cy = int(cy_start + speed_y * t + 8 * np.cos(freq_y * t))
+            cx = int(cx_start + speed_x * t + 8 * np.sin(freq_x * t))
+            cy = int(cy_start + speed_y * t + 6 * np.cos(freq_y * t))
             cx = max(radius, min(width - radius, cx))
             cy = max(radius, min(height - radius, cy))
             dist_sq = (xx - cx) ** 2 + (yy - cy) ** 2
             mask = dist_sq < radius ** 2
-            # Gaussian-like intensity falloff
             intensity = brightness * np.exp(-dist_sq / (2 * (radius * 0.7) ** 2))
             frames[t] = np.clip(frames[t].astype(np.float32) + intensity * mask, 0, 255).astype(np.uint8)
 
-    # Stage positions: smooth trajectory with some drift
-    stage_base = np.cumsum(np.random.randn(num_frames, 2) * 0.3, axis=0)
-    stage_base += np.array([100.0, 100.0])  # start offset
-    stage_pos = stage_base.astype(np.float32)
+    # --- Stage trajectory: start far, approach target ---
+    start_stage_x = target_stage_x + np.random.uniform(40.0, 80.0) * np.random.choice([-1, 1])
+    start_stage_y = target_stage_y + np.random.uniform(40.0, 80.0) * np.random.choice([-1, 1])
+    # Smooth approach with noise
+    t_norm = np.linspace(0, 1, num_frames)
+    approach_x = start_stage_x + (target_stage_x - start_stage_x) * (1 - np.exp(-3 * t_norm))
+    approach_y = start_stage_y + (target_stage_y - start_stage_y) * (1 - np.exp(-3 * t_norm))
+    noise_x = np.cumsum(np.random.randn(num_frames) * 0.15)
+    noise_y = np.cumsum(np.random.randn(num_frames) * 0.15)
+    stage_pos = np.column_stack([approach_x + noise_x, approach_y + noise_y]).astype(np.float32)
 
-    # Pipette positions: XYZ with Z dipping down mid-episode
-    pip_x = np.cumsum(np.random.randn(num_frames) * 0.2)
-    pip_y = np.cumsum(np.random.randn(num_frames) * 0.2)
-    # Z goes down then up (simulating aspiration)
-    z_trajectory = np.concatenate([
-        np.linspace(100, 60, num_frames // 3),
-        np.linspace(60, 55, num_frames // 3),
-        np.linspace(55, 100, num_frames - 2 * (num_frames // 3)),
-    ])
-    pipette_pos = np.column_stack([pip_x, pip_y, z_trajectory]).astype(np.float32)
+    # --- Pipette trajectory: start at rest, approach target, dip Z ---
+    start_pip_x = target_pip_x + np.random.uniform(15.0, 30.0) * np.random.choice([-1, 1])
+    start_pip_y = target_pip_y + np.random.uniform(15.0, 30.0) * np.random.choice([-1, 1])
+    pip_approach_x = start_pip_x + (target_pip_x - start_pip_x) * (1 - np.exp(-2.5 * t_norm))
+    pip_approach_y = start_pip_y + (target_pip_y - start_pip_y) * (1 - np.exp(-2.5 * t_norm))
+    pip_noise_x = np.cumsum(np.random.randn(num_frames) * 0.1)
+    pip_noise_y = np.cumsum(np.random.randn(num_frames) * 0.1)
+    # Z: descend to target, hold, then retract
+    z_descend = np.linspace(100, target_pip_z, num_frames // 3)
+    z_hold = np.linspace(target_pip_z, target_pip_z - 2, num_frames // 3)
+    z_retract = np.linspace(target_pip_z - 2, 100, num_frames - 2 * (num_frames // 3))
+    z_trajectory = np.concatenate([z_descend, z_hold, z_retract])
+    pipette_pos = np.column_stack([
+        pip_approach_x + pip_noise_x,
+        pip_approach_y + pip_noise_y,
+        z_trajectory,
+    ]).astype(np.float32)
 
     # Timestamps
     timestamps = np.linspace(0, num_frames / fps, num_frames)
@@ -147,14 +185,40 @@ def generate_episode(
     # Select task template
     template = TASK_TEMPLATES[episode_idx % len(TASK_TEMPLATES)]
 
-    # Save metadata.json
+    # Build subgoals with frame ranges and positions
+    n_sg = len(template["subgoals"])
+    seg_len = num_frames // n_sg
+    subgoals = []
+    for i, sg in enumerate(template["subgoals"]):
+        s = i * seg_len
+        e = (i + 1) * seg_len if i < n_sg - 1 else num_frames
+        subgoals.append({
+            "description": sg["description"],
+            "action_type": sg["action_type"],
+            "start_frame": s,
+            "end_frame": e,
+        })
+
+    # Save metadata.json with targets
     metadata = {
         "episode_id": episode_id,
         "task_description": template["task"],
-        "subgoals": template["subgoals"],
+        "subgoals": subgoals,
         "num_frames": num_frames,
         "timestamp": timestamp,
         "resolution": [width, height],
+        # ── Target info ──
+        "target": {
+            "stage_position": [float(target_stage_x), float(target_stage_y)],
+            "pipette_position": [float(target_pip_x), float(target_pip_y), float(target_pip_z)],
+            "pixel_position": [int(target_pixel_x), int(target_pixel_y)],
+            "pixel_radius": int(target_radius),
+        },
+        # ── Start positions ──
+        "start_position": {
+            "stage": [float(start_stage_x), float(start_stage_y)],
+            "pipette": [float(start_pip_x), float(start_pip_y), 100.0],
+        },
     }
     with open(ep_dir / "metadata.json", "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2, ensure_ascii=False)

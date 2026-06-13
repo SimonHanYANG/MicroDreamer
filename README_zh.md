@@ -150,6 +150,57 @@ python scripts/collect_ui.py
 - `data.npz`：帧序列、载物台位置、移液器位置、时间戳
 - `metadata.json`：任务描述、子目标列表、帧数
 
+## 端到端测试命令
+
+```bash
+# 0. 环境准备
+conda activate microdreamer
+cd D:\SimonWorkspace\MicroRobotDataGen\MicroDreamer
+
+# 1. 生成 mock 数据（含目标点）
+python scripts/generate_test_data.py --output_dir ./data/test_raw --num_episodes 10 --frames 50 --resolution 200,160
+
+# 1.5 可视化检查数据（交互式 GUI）
+python scripts/viz_mock_data.py
+
+# 2. 运行全部单元测试（~34 tests）
+python tests/run_all_tests.py
+
+# 3. 训练动作模型（3 epochs，测试配置）
+python scripts/train_action.py --data_dir ./data/test_raw --output_dir ./outputs/test --simple_lang --config config/test.yaml --patience 3
+
+# 4. 训练视频模型（3 epochs，测试配置）
+python scripts/train_video.py --data_dir ./data/test_raw --output_dir ./outputs/test --config config/test.yaml --patience 3
+
+# 5. 评估两个模型
+python scripts/evaluate.py --data_dir ./data/test_raw --output_dir ./outputs/test/eval --action_ckpt ./outputs/test/checkpoints/action_best.pt --video_ckpt ./outputs/test/checkpoints/video_best.pt --config config/test.yaml
+
+# 5.5 可视化评估结果
+python scripts/viz_mock_data.py --data_dir ./data/test_raw
+
+# 6. 推理
+python inference/predict.py --action_ckpt ./outputs/test/checkpoints/action_best.pt --video_ckpt ./outputs/test/checkpoints/video_best.pt --config config/test.yaml --device cpu --task "Aspirate the target cell"
+
+# 6.5 可视化推理结果
+python scripts/viz_mock_data.py --data_dir ./data/test_raw
+
+# 7. 清理
+rmdir /s /q data\test_raw
+rmdir /s /q outputs\test
+```
+
+快速验证（不需要 checkpoint）：
+```bash
+python inference/predict.py --demo --device cpu
+```
+
+静态可视化（生成 PNG）：
+```bash
+python scripts/visualize_mock_data.py --output_dir ./data/viz_mock --save_dir ./outputs/viz
+```
+
+详见 [端到端测试手册](docs/E2E_TEST_GUIDE.md)。
+
 ## 许可证
 
 待定

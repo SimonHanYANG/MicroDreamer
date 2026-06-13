@@ -5,11 +5,14 @@
 This guide provides a complete end-to-end testing procedure to verify all core functionalities of the MicroDreamer system:
 
 1. **Data Generation** — Generate mock training data
-2. **Data Loading** — Verify Dataset loading and preprocessing
-3. **Action Model Training** — Train the action prediction model
-4. **Video Model Training** — Train the video prediction model
-5. **Model Evaluation** — Evaluate both models with metrics
-6. **Inference** — Run predictions with trained models
+2. **Data Visualization** — Interactively inspect generated data quality
+3. **Data Loading** — Verify Dataset loading and preprocessing
+4. **Action Model Training** — Train the action prediction model
+5. **Video Model Training** — Train the video prediction model
+6. **Model Evaluation** — Evaluate both models with metrics
+7. **Inference** — Run predictions with trained models
+
+> The visualization tool `viz_mock_data.py` can be used at any stage — after data generation, before training, after evaluation, or after inference — to inspect data quality and model outputs.
 
 ---
 
@@ -58,6 +61,38 @@ python scripts/generate_test_data.py --output_dir ./data/test_raw --num_episodes
   python -c "import numpy as np; d=np.load('./data/test_raw/episode_20260614_000000_0000/data.npz'); print('frames:', d['frames'].shape, 'stage:', d['stage_positions'].shape, 'pipette:', d['pipette_positions'].shape)"
   ```
 - Expected output: `frames: (50, 160, 200) stage: (50, 2) pipette: (50, 3)`
+
+---
+
+### Step 1.5: Visualize Generated Data (Recommended)
+
+Use the interactive visualization tool to inspect the generated mock data.
+
+**Interactive GUI (Recommended):**
+```cmd
+python scripts/viz_mock_data.py
+```
+
+**Features:**
+- Episode browser with dropdown selector
+- Frame-by-frame playback of microscopy images
+- Stage XY trajectory plot (colour-coded by subgoal)
+- Stage/Pipette positions vs time
+- 5-DOF action deltas
+- Subgoal timeline, frame statistics
+- All plots synchronised with frame slider
+
+**What to check:**
+- Frames contain identifiable moving objects (white circles)
+- Stage trajectory is a continuous smooth path
+- Pipette Z axis shows a descending trend (simulating aspiration)
+- Subgoal time segments are reasonably divided
+
+**Static visualization (generates PNGs):**
+```cmd
+python scripts/visualize_mock_data.py --output_dir ./data/viz_mock --save_dir ./outputs/viz
+```
+Check `episode_XX_overview.png` and `episode_XX_montage.png` in `./outputs/viz/`.
 
 ---
 
@@ -113,6 +148,10 @@ python scripts/train_action.py --data_dir ./data/test_raw --output_dir ./outputs
   dir outputs\test\checkpoints\
   ```
   Should contain `action_best.pt` and `action_ckpt_epoch*.pt`
+
+---
+
+> **💡 Visualization tip:** Before training, you can reopen `python scripts/viz_mock_data.py` to confirm the action delta distribution of training data is reasonable.
 
 ---
 
@@ -180,6 +219,23 @@ type outputs\test\eval\eval_video.json
 
 ---
 
+### Step 5.5: Visualize Evaluation Results (Recommended)
+
+After evaluation, visually compare predictions against ground truth.
+
+**Interactive inspection:**
+```cmd
+python scripts/viz_mock_data.py --data_dir ./data/test_raw
+```
+Browse through the original data frame by frame, and cross-reference with metrics in `outputs/test/eval/eval_action.json` and `eval_video.json`.
+
+**What to check:**
+- `action_mse` / `endpoint_error` are finite (not NaN/Inf)
+- Video metric `psnr` > 20dB (may be lower with test config, which is normal)
+- `temporal_consistency` close to 1.0 indicates good temporal coherence
+
+---
+
 ### Step 6: Run Inference
 
 Run inference with trained models.
@@ -206,6 +262,26 @@ python inference/predict.py --demo --device cpu
 **Expected result:**
 - Should display `Actions shape: (16, 5)`
 - Should display `Predicted frames shape: (4, 1, 384, 512)`
+
+---
+
+### Step 6.5: Visualize Inference Results (Recommended)
+
+After inference, use the visualization tool to compare input frames with predicted outputs.
+
+**Interactive inspection of inference inputs:**
+```cmd
+python scripts/viz_mock_data.py --data_dir ./data/test_raw
+```
+Select any episode and play through to observe model input data:
+- Are the frame contents clear?
+- Are the position trajectories smooth?
+- Are the action delta magnitudes reasonable?
+
+**What to check:**
+- Inference output `Actions shape: (16, 5)` — 5-DOF action sequence
+- Predicted frames `shape: (4, 1, 384, 512)` — 4 future video frames
+- Compare ground truth trajectory in `viz_mock_data.py` with inference output for the same episode
 
 ---
 
@@ -251,12 +327,15 @@ rm -rf ./data/test_raw ./outputs/test
 | Step | Expected Time | Notes |
 |------|--------------|-------|
 | 1. Generate data | ~5 sec | 10 episodes, 200x160 resolution |
+| 1.5. Visualize data | Manual | `viz_mock_data.py` interactive, optional |
 | 2. Unit tests | ~60 sec | 8 test suites, ~38 tests |
 | 3. Train action model | ~15 sec | 3 epochs, GPU |
 | 4. Train video model | ~10 sec | 3 epochs, GPU |
 | 5. Evaluate models | ~90 sec | Action + video evaluation |
+| 5.5. Visualize eval | Manual | Cross-check metrics with data, optional |
 | 6. Inference | ~30 sec | Including model loading |
-| **Total** | **~3-4 min** | All steps |
+| 6.5. Visualize inference | Manual | Compare predictions vs ground truth, optional |
+| **Total** | **~3-4 min** | Automated steps only (excluding visualization) |
 
 > Note: CPU mode takes approximately 3-5x longer for training and inference.
 
@@ -326,4 +405,6 @@ python scripts/train_video.py --help
 python scripts/evaluate.py --help
 python scripts/calibrate.py --help
 python inference/predict.py --help
+python scripts/viz_mock_data.py --help
+python scripts/visualize_mock_data.py --help
 ```
