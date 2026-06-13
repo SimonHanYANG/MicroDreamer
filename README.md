@@ -2,6 +2,8 @@
 
 **Language-Conditioned Video Trajectory Generation and Action Prediction for Micro/Nano-Robot Manipulation**
 
+English | [中文](./README_zh.md)
+
 MicroDreamer is a dual-output model that simultaneously generates future video frames and predicts action sequences for micro/nano-robot manipulation tasks under a microscope. It is designed for cell manipulation operations such as ICSI (intracytoplasmic sperm injection), cell sorting, and embryo transfer.
 
 ## Architecture
