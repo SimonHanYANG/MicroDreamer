@@ -37,6 +37,7 @@ class MicroDreamerPredictor:
         # Action model
         self.action_model = ActionPredictionModel(
             hidden_dim=self.cfg.action_model.hidden_dim,
+            num_tiles=self.cfg.action_model.num_tiles,
             visual_layers=self.cfg.action_model.num_layers,
             visual_heads=self.cfg.action_model.num_heads,
             action_dim=self.cfg.action_model.action_dim,
@@ -47,21 +48,26 @@ class MicroDreamerPredictor:
         ).to(self.device)
 
         if action_ckpt and Path(action_ckpt).exists():
-            self.action_model.load_state_dict(torch.load(action_ckpt, map_location=self.device))
+            ckpt = torch.load(action_ckpt, map_location=self.device, weights_only=False)
+            self.action_model.load_state_dict(ckpt["model"] if "model" in ckpt else ckpt)
             self.action_model.eval()
 
-        # Video model
+        # Video model - resolution is (H, W) in model, config is [W, H]
+        video_res = (self.cfg.video_model.resolution[1], self.cfg.video_model.resolution[0])
         self.video_model = VideoPredictionModel(
             hidden_dim=256,
             num_frames=self.cfg.video_model.num_frames,
-            resolution=tuple(self.cfg.video_model.resolution),
+            resolution=video_res,
             num_layers=4,
             num_heads=8,
+            lora_rank=self.cfg.video_model.lora_rank,
+            lora_alpha=self.cfg.video_model.lora_alpha,
             context_dim=self.cfg.language.cross_attn_dim,
         ).to(self.device)
 
         if video_ckpt and Path(video_ckpt).exists():
-            self.video_model.load_state_dict(torch.load(video_ckpt, map_location=self.device))
+            ckpt = torch.load(video_ckpt, map_location=self.device, weights_only=False)
+            self.video_model.load_state_dict(ckpt["model"] if "model" in ckpt else ckpt)
             self.video_model.eval()
 
         # Language encoder — hidden_dim must match video model context_dim

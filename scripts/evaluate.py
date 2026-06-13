@@ -40,6 +40,7 @@ def evaluate_action(args, cfg, device):
 
     model = ActionPredictionModel(
         hidden_dim=cfg.action_model.hidden_dim,
+        num_tiles=cfg.action_model.num_tiles,
         visual_layers=cfg.action_model.num_layers,
         visual_heads=cfg.action_model.num_heads,
         action_dim=cfg.action_model.action_dim,
@@ -50,7 +51,7 @@ def evaluate_action(args, cfg, device):
     ).to(device)
 
     if args.action_ckpt:
-        ckpt = torch.load(args.action_ckpt, map_location=device)
+        ckpt = torch.load(args.action_ckpt, map_location=device, weights_only=False)
         model.load_state_dict(ckpt["model"] if "model" in ckpt else ckpt)
         logger.info(f"Loaded action checkpoint: {args.action_ckpt}")
 
@@ -59,11 +60,8 @@ def evaluate_action(args, cfg, device):
 
     with torch.no_grad():
         for batch in dataloader:
-            tiles = batch["high_res_tiles"].to(device)
+            tiles = batch["high_res_tiles"].to(device)  # (B, num_tiles, 1, 448, 448)
             actions = batch["actions"].to(device)
-
-            B, T_tiles, C, H, W = tiles.shape
-            tiles = tiles.reshape(B * T_tiles, C, H, W).unsqueeze(1)
 
             pred = model.predict_actions(tiles, lang_text=batch.get("task_description"))
 
@@ -99,18 +97,22 @@ def evaluate_video(args, cfg, device):
     )
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=0)
 
+    # Model - resolution is (H, W) in model, config is [W, H]
+    model_res = (cfg.video_model.resolution[1], cfg.video_model.resolution[0])
     model = VideoPredictionModel(
         in_channels=1,
         hidden_dim=256,
         num_frames=cfg.video_model.num_frames,
-        resolution=tuple(cfg.video_model.resolution),
+        resolution=model_res,
         num_layers=4,
         num_heads=8,
+        lora_rank=cfg.video_model.lora_rank,
+        lora_alpha=cfg.video_model.lora_alpha,
         context_dim=cfg.language.cross_attn_dim,
     ).to(device)
 
     if args.video_ckpt:
-        ckpt = torch.load(args.video_ckpt, map_location=device)
+        ckpt = torch.load(args.video_ckpt, map_location=device, weights_only=False)
         model.load_state_dict(ckpt["model"] if "model" in ckpt else ckpt)
         logger.info(f"Loaded video checkpoint: {args.video_ckpt}")
 

@@ -89,6 +89,8 @@ See [Data Collection Guide](docs/DATA_COLLECTION_GUIDE.md) for detailed instruct
 - [API Reference](docs/API.md) — Complete API documentation
 - [Data Collection Guide](docs/DATA_COLLECTION_GUIDE.md) — 数据采集指南 (中文)
 - [Data Collection Guide (EN)](docs/DATA_COLLECTION_GUIDE_EN.md) — English version
+- [E2E Test Guide](docs/E2E_TEST_GUIDE.md) — 端到端测试手册 (中文)
+- [E2E Test Guide (EN)](docs/E2E_TEST_GUIDE_EN.md) — English version
 - [Development Log](docs/DEVELOPMENT.md) — Development progress and changelog
 
 ## Hardware Requirements

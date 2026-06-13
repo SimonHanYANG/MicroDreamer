@@ -12,6 +12,7 @@ TESTS = [
     "tests/test_models/test_video_model.py",
     "tests/test_inference/test_e2e.py",
     "tests/test_scripts/test_collect_ui.py",
+    "tests/test_e2e_pipeline.py",
 ]
 
 def main():

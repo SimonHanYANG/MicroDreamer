@@ -116,6 +116,8 @@ python scripts/collect_ui.py
 - [API 参考](docs/API.md) — 完整 API 文档
 - [数据采集指南](docs/DATA_COLLECTION_GUIDE.md) — 详细的采集流程与标注规范
 - [Data Collection Guide (EN)](docs/DATA_COLLECTION_GUIDE_EN.md) — 英文版
+- [端到端测试手册](docs/E2E_TEST_GUIDE.md) — 完整测试流程与操作步骤
+- [E2E Test Guide (EN)](docs/E2E_TEST_GUIDE_EN.md) — English version
 - [开发日志](docs/DEVELOPMENT.md) — 开发进度与更新记录
 
 ## 硬件要求

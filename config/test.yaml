@@ -1,0 +1,79 @@
+# MicroDreamer Test Configuration
+# ================================
+# Small/fast settings for end-to-end pipeline testing.
+# NOT for real training — use config/default.yaml for production.
+
+project:
+  name: MicroDreamer-Test
+  version: 0.1.0
+
+camera:
+  resolution: [200, 160]          # small for fast tests (W, H)
+  fps: 30
+  pixel_format: Mono8
+  pixel_size_um: 0.6
+
+stage:
+  type: virtual
+  speed: 100
+  range_x_um: [-50000, 50000]
+  range_y_um: [-50000, 50000]
+
+pipette:
+  type: virtual
+  speed: 10
+  range_x_um: [-10000, 10000]
+  range_y_um: [-10000, 10000]
+  range_z_um: [0, 200]
+
+collection:
+  output_dir: "./data/test_raw"
+  sync_tolerance_ms: 50
+  camera_fps: 30
+  stage_hz: 100
+  pipette_hz: 100
+  buffer_size: 100
+
+preprocessing:
+  high_res: [200, 160]            # same as camera for test
+  low_res: [128, 96]              # small low-res (W, H)
+  action_dim: 5
+  frame_skip: 1
+  normalize_actions: true
+
+video_model:
+  lora_rank: 8                    # minimal LoRA for speed
+  lora_alpha: 16
+  num_frames: 8                   # fewer frames
+  resolution: [128, 96]           # (W, H) — matching low_res
+
+action_model:
+  num_tiles: 1                    # 200x160 → 1 tile at 448px
+  hidden_dim: 128                 # small for fast test
+  num_layers: 2
+  num_heads: 4
+  action_dim: 5
+  action_horizon: 4               # short horizon
+  dropout: 0.1
+
+language:
+  max_length: 32
+  cross_attn_dim: 256             # small for fast test
+
+training:
+  batch_size: 2
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  max_epochs: 3                   # just enough to verify training works
+  warmup_steps: 2
+  gradient_accumulation_steps: 1
+  fp16: false                     # CPU-safe
+  deepspeed: false                # single GPU/CPU
+  num_gpus: 1
+  log_interval: 1
+  save_interval: 100
+  eval_interval: 100
+
+calibration:
+  pixel_to_um: 0.6
+  focus_planes: []
